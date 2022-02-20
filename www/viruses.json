@@ -42,5 +42,16 @@
         "vaccination" : 0,
         "quarantine" : true,
         "distancing" : false
+    },
+
+    {
+        "name": "Laziness",
+        "virulence": 0.75,
+        "incubation": "1",
+        "infection": "30",
+        "lethality": 0,
+        "vaccination": 0,
+        "quarantine": false,
+        "distancing": false
     }
 ]

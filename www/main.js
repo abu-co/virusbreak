@@ -2,7 +2,8 @@
 'use-strict';
 
 // Variable to say where we are in the simulation
-let day = 1;
+// abuco: set day to zero instead of one
+let day = 0;
 
 // The amount of time(ms) taken between days - the speed of updates
 let timeout = 250;
@@ -46,6 +47,17 @@ let intervalID = null;
 // json file
 
 let viruses = null;
+
+// abuco: records info every ten days
+let data = {
+    day: [],
+    uninfected : [],
+    infectious : [],
+    symptomatic : [],
+    immune : [],
+    vaccinated : [],
+    dead : []
+};
 
 // A function which builds the simulation table to save us having
 // to long code the HTML. Also means we can control the size of the
@@ -348,6 +360,7 @@ var setPeopleClasses = function () {
         vaccinated : 0,
         dead : 0
     }
+
     for (r = 0; r < rows; r++) {
         for (c = 0; c < cols; c++) {
             thisclass = setPersonClass(r, c);
@@ -365,6 +378,17 @@ var setPeopleClasses = function () {
     // First we update the counts
     for (var thisclass in groupcounts) {
         $("#"+thisclass+"count").html(formatLargeNumber(groupcounts[thisclass]));
+    }
+
+    if (day % 10 === 0) {
+        if (day === 0) {
+            clearData();
+        }
+        for (const attr in groupcounts) {
+            (/** @type {number[]} */(data[attr]))
+                .push(groupcounts[attr]);
+        }
+        data.day.push(day);
     }
 
     // Now we update the graph
@@ -435,36 +459,51 @@ var formatLargeNumber = function (value) {
 var setPersonClass = function (r, c) {
     person = people[r][c];
 
-    person.jqueryObj.removeClass();
+    function updateClassTo(className) {
+        const p = person.jqueryObj;
+        if(!p.hasClass(className)) {
+            p.get(0).className = className;
+        }
+    }
+
+    // remove@abuco: person.jqueryObj.removeClass();
 
     // Work out what class they are supposed to belong to
 
     // Easiest if they are dead!
     if (person.dead) {
-        person.jqueryObj.addClass("dead");
+        // person.jqueryObj.addClass("dead");
+        updateClassTo("dead");
         return("dead")
     }
     else if (person.vaccinated) {
-        person.jqueryObj.addClass("vaccinated");
+        // person.jqueryObj.addClass("vaccinated");
+        updateClassTo("vaccinated");
         return("vaccinated");
     }
     else if (person.immune) {
-        person.jqueryObj.addClass("immune");
+        // person.jqueryObj.addClass("immune");
+        updateClassTo("immune");
         return("immune");
     }
     else if (person.infectedAt != null) {
         if (parseInt(person.infectedAt) + parseInt(virus.incubation) <= day) {
             // They're symptomatic
-            person.jqueryObj.addClass("symptomatic");
+            // person.jqueryObj.addClass("symptomatic");
+            updateClassTo("symptomatic");
             return("symptomatic");
         }
         else {
             // They're infectious but asymptomatic
-            person.jqueryObj.addClass("infectious");
+            // person.jqueryObj.addClass("infectious");
+            updateClassTo("infectious");
             return("infectious");
         }
     }
     else {
+        if(!person.jqueryObj.hasClass("")) {
+            person.jqueryObj.removeClass();
+        }
         return("uninfected");
     }
 
@@ -567,7 +606,7 @@ var resetSimulation = function () {
         intervalID = null;
         $("#startstop").html("Start");
     }
-    day = 1;
+    day = 0;
     $("#day").text("Day " + day);
 
     for (r = 0; r < rows; r++) {
@@ -576,6 +615,8 @@ var resetSimulation = function () {
         }
     }
 
+    clearData();
+
     // Also reset the graph
     createGraph();
 
@@ -583,7 +624,28 @@ var resetSimulation = function () {
     // infection so that there's something to 
     // do in the simulation
     randomlyInfect();
+}
 
+var clearData = function() {
+    // abuco: clear data
+    for(const attr in data) {
+        data[attr] = [];
+    }
+}
+
+var generateDataColumns = function () {
+    let cols = [];
+    const newline = "\n";
+    for(const attr in data) {
+        let text = "";
+        text += attr + newline + newline;
+        (/** @type {number[]} */(data[attr])).forEach((num, i) => {
+            text += Math.trunc(num).toString(10) + newline;
+        });
+        text += newline;
+        cols.push(text);
+    }
+    return cols;
 }
 
 
@@ -728,6 +790,24 @@ $(document).ready(function () {
         else {
             alert("No match to "+$(this).text())
         }
+    })
+
+    $("#export").click(function() {
+        const dataCols = generateDataColumns();
+        // const url = "data:text/plain;base64," + btoa();
+        let newTab = window.open("");
+        let doc = newTab.document;
+        doc.writeln('<div style="display: flex;">');
+        dataCols.forEach((col) => {
+            doc.writeln('<pre style="'
+                + 'margin: 1em; padding: 1em; box-sizing: border-box; '
+                + 'background-color: lightgray; border-radius: 0.2em;'
+                + '">');
+            doc.write(col);
+            doc.writeln("</pre>")
+        });
+        doc.writeln("</div>");
+        doc.close();
     })
 
 
